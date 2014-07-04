@@ -148,3 +148,11 @@ install_buildpacks:
   - name: node_buildpack
     package: buildpack_node
 
+# example to associate placement options to spaces
+dea_feature_options:
+  space_1:
+    ssd: true
+    security: true
+  space_2:
+    ssd: false
+    security: true
