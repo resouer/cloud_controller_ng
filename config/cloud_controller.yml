@@ -150,9 +150,14 @@ install_buildpacks:
 
 # example to associate placement options to spaces
 dea_feature_options:
-  space_1:
-    ssd: true
-    security: true
-  space_2:
-    ssd: false
-    security: true
+  org1:
+    space_1:
+      ssd: true
+      security: true
+    space_2:
+      ssd: false
+      security: true
+  org2:
+    space_1:
+      ssd: true
+      security: true
