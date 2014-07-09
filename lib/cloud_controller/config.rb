@@ -163,7 +163,8 @@ module VCAP::CloudController
             optional("position") => Integer,
           }
         ],
-        optional(:app_bits_upload_grace_period_in_seconds) => Integer
+        optional(:app_bits_upload_grace_period_in_seconds) => Integer,
+        optional(:dea_feature_options) => Hash
       }
     end
 

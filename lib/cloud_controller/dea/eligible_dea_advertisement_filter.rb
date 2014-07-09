@@ -42,4 +42,19 @@ class EligibleDeaAdvertisementFilter
     @filtered_advertisements.select! { |ad| @instance_counts_by_zones[ad.zone] == minimum_instance_count }
     self
   end
+
+  def only_in_featured_dea(dea_feature_options)
+
+    app_org =  dea_feature_options[:app][:org]
+    app_space = dea_feature_options[:app][:space]
+
+    if dea_feature_options.has_key?(app_org) && dea_feature_options[app_org].has_key?(app_space)
+        keys = dea_feature_options[app_org][app_space].keys
+        keys.each do
+          # TODO interate the @filtered_advertisements to select dea match key value
+        end
+    end
+    self
+  end
+
 end
