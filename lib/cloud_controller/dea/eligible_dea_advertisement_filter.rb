@@ -43,17 +43,12 @@ class EligibleDeaAdvertisementFilter
     self
   end
 
-  def only_in_featured_dea(dea_feature_options)
-
-    app_org =  dea_feature_options[:app][:org]
-    app_space = dea_feature_options[:app][:space]
-
+  def only_in_featured_dea(dea_feature_options, app_org, app_space)
+    puts dea_feature_options, app_org, app_space
     if dea_feature_options.has_key?(app_org) && dea_feature_options[app_org].has_key?(app_space)
-        keys = dea_feature_options[app_org][app_space].keys
-        keys.each do
-          # TODO interate the @filtered_advertisements to select dea match key value
-        end
+       @filtered_advertisements.select! {|ad| ad.dea_features.eql?(dea_feature_options[app_org][app_space])}
     end
+    #TODO unit test is needed!
     self
   end
 

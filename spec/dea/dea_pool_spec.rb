@@ -65,7 +65,9 @@ module VCAP::CloudController
         if options[:zone]
           dea_advertisement["placement_properties"] = {"zone" => options[:zone]}
         end
-
+        if options[:dea_features]
+          dea_advertisement["dea_features"] = {"dea_features" => options[:dea_features]}
+        end
         dea_advertisement
       end
 
@@ -99,6 +101,16 @@ module VCAP::CloudController
 
       let(:dea_in_user_defined_zone_with_1_instance_and_256m_memory) do
         dea_advertisement :dea => "dea-id8", :memory => 256, :instance_count => 1, :zone => "zone1"
+      end
+
+      let(:dea_with_ssd_and_security) do
+        dea_advertisement :dea => "dea-id-9", :memory => 1024, :instance_count => 2,
+                          :dea_features => {:ssd => true, :security => true}
+      end
+
+      let(:dea_with_ssd_but_no_security) do
+        dea_advertisement :dea => "dea-id-10", :memory => 1024, :instance_count => 2,
+                          :dea_features => {:ssd => true, :security => false}
       end
 
       let(:available_disk) { 100 }
@@ -186,6 +198,37 @@ module VCAP::CloudController
             subject.process_advertise_message(dea_in_default_zone_with_1_instance_and_512m_memory)
             subject.process_advertise_message(dea_in_user_defined_zone_with_2_instances_and_1024m_memory)
             subject.find_dea(mem: 256, stack: "stack", app_id: "app-id").should == "dea-id6"
+          end
+        end
+      end
+
+      describe "only_in_featured_dea" do
+        context "when only considering dea features" do
+          it 'picks the dea with expected feature ' do
+            subject.process_advertise_message(dea_with_ssd_and_security)
+            subject.process_advertise_message(dea_with_ssd_but_no_security)
+            dea_feature_options = {
+                'org_1' => {
+                    'space_1' => {
+                        'ssd' => true,
+                        'security' => true
+                    },
+                    'space_2' => {
+                        'ssd' => true,
+                        'security' => false
+                    }
+                },
+                'org_2' => {
+                    'space_1' => {
+                        'ssd' => true,
+                        'security' => true
+                    }
+                }
+            }
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
+                             app_space: 'space_1').should == "dea-id-9"
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
+                             app_space: 'space_2').should == "dea-id-10"
           end
         end
       end
