@@ -169,7 +169,7 @@ module VCAP::CloudController
 
         dea_id = dea_pool.find_dea(mem: app.memory, disk: app.disk_quota, stack: app.stack.name,
                                    app_id: app.guid, dea_feature_options: dea_feature_options,
-                                   app_space: app.space.name, app_org: app.space.org.name)
+                                   app_space: app.space.name, app_org: app.space.organization.name)
         if dea_id
           dea_publish_start(dea_id, start_message)
           dea_pool.mark_app_started(dea_id: dea_id, app_id: app.guid)
