@@ -44,12 +44,25 @@ class EligibleDeaAdvertisementFilter
   end
 
   def only_in_featured_dea(dea_feature_options, app_org, app_space)
-    puts dea_feature_options, app_org, app_space
-    if dea_feature_options.has_key?(app_org) && dea_feature_options[app_org].has_key?(app_space)
-       @filtered_advertisements.select! {|ad| ad.dea_features.eql?(dea_feature_options[app_org][app_space])}
+    if !dea_feature_options.blank? && dea_feature_options.has_key?(app_org) && dea_feature_options[app_org].has_key?(app_space)
+       @filtered_advertisements.select! {|ad| is_featured_dea?(ad.dea_features, dea_feature_options[app_org][app_space])}
     end
-    #TODO unit test is needed!
     self
+  end
+
+  private
+
+  # NOTE: You can only filter dea by features you specified in dea's yaml, aka, if you do not give value to 'foo' feature, cc will
+  # never know that dea is 'foo' or not, even you provided 'foo' condition on cc's side.
+  def is_featured_dea?(real_world_from_dea, expected_from_cc)
+    matched = true
+    expected_from_cc.each { |key, value|
+      if real_world_from_dea[key] != value
+        matched = false
+        break
+      end
+    }
+    matched
   end
 
 end

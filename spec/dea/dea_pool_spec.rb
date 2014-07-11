@@ -66,7 +66,7 @@ module VCAP::CloudController
           dea_advertisement["placement_properties"] = {"zone" => options[:zone]}
         end
         if options[:dea_features]
-          dea_advertisement["dea_features"] = {"dea_features" => options[:dea_features]}
+          dea_advertisement["dea_features"] = options[:dea_features]
         end
         dea_advertisement
       end
@@ -105,12 +105,27 @@ module VCAP::CloudController
 
       let(:dea_with_ssd_and_security) do
         dea_advertisement :dea => "dea-id-9", :memory => 1024, :instance_count => 2,
-                          :dea_features => {:ssd => true, :security => true}
+                          :dea_features => {"ssd" => true, "security" => true}
       end
 
       let(:dea_with_ssd_but_no_security) do
         dea_advertisement :dea => "dea-id-10", :memory => 1024, :instance_count => 2,
-                          :dea_features => {:ssd => true, :security => false}
+                          :dea_features => {"ssd" => true, "security" => false}
+      end
+
+      let(:dea_with_ssd_but_no_security_1_instance) do
+        dea_advertisement :dea => "dea-id-11", :memory => 1024, :instance_count => 1,
+                          :dea_features => {"ssd" => true, "security" => false}, :zone => "zone-1"
+      end
+
+      let(:dea_with_ssd_but_no_security_2_instance) do
+        dea_advertisement :dea => "dea-id-12", :memory => 1024, :instance_count => 2,
+                          :dea_features => {"ssd" => true, "security" => false}, :zone => "zone-1"
+      end
+
+      let(:dea_with_ssd_no_security_and_no_ha) do
+        dea_advertisement :dea => "dea-id-13", :memory => 1024, :instance_count => 2,
+                          :dea_features => {"ssd" => true, "security" => false, "ha" => false}, :zone => "zone-1"
       end
 
       let(:available_disk) { 100 }
@@ -204,31 +219,83 @@ module VCAP::CloudController
 
       describe "only_in_featured_dea" do
         context "when only considering dea features" do
-          it 'picks the dea with expected feature ' do
+          dea_feature_options = {
+              'org_1' => {
+                  'space_1' => {
+                      'ssd' => true,
+                      'security' => true
+                  },
+                  'space_2' => {
+                      'ssd' => true,
+                      'security' => false
+                  },
+                  'space_3' => {
+                      'security' => false
+                  }
+
+              },
+              'org_2' => {
+                  'space_1' => {
+                      'ssd' => true,
+                      'security' => true
+                  },
+                  'space_2' => {
+                      'ssd' => false,
+                      'security' => false
+                  }
+              }
+          }
+          it 'picks the dea with expected feature' do
             subject.process_advertise_message(dea_with_ssd_and_security)
             subject.process_advertise_message(dea_with_ssd_but_no_security)
-            dea_feature_options = {
-                'org_1' => {
-                    'space_1' => {
-                        'ssd' => true,
-                        'security' => true
-                    },
-                    'space_2' => {
-                        'ssd' => true,
-                        'security' => false
-                    }
-                },
-                'org_2' => {
-                    'space_1' => {
-                        'ssd' => true,
-                        'security' => true
-                    }
-                }
-            }
+
             subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
                              app_space: 'space_1').should == "dea-id-9"
             subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
                              app_space: 'space_2').should == "dea-id-10"
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_2',
+                             app_space: 'space_1').should == "dea-id-9"
+          end
+          it 'still picks the right dea when app requires no dea features' do
+            subject.process_advertise_message(dea_with_ssd_and_security)
+            subject.process_advertise_message(dea_with_ssd_but_no_security)
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_3',
+                             app_space: 'space_3').should be_in("dea-id-9", "dea-id-10")
+          end
+          it 'still works even when dea_feature_options is not provided ' do
+            subject.process_advertise_message(dea_with_ssd_and_security)
+            subject.process_advertise_message(dea_with_ssd_but_no_security)
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", app_org: 'org_no',
+                             app_space: 'space_no').should be_in("dea-id-9", "dea-id-10")
+          end
+          it 'picks no dea when dea features are not meet ' do
+            subject.process_advertise_message(dea_with_ssd_and_security)
+            subject.process_advertise_message(dea_with_ssd_but_no_security)
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_2',
+                             app_space: 'space_2').should == nil
+          end
+          it 'picks dea with two or three features but provide only two conditions from cc' do
+            subject.process_advertise_message(dea_with_ssd_no_security_and_no_ha)
+            subject.process_advertise_message(dea_with_ssd_and_security)
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
+                             app_space: 'space_3').should == "dea-id-13"
+          end
+        end
+
+        context "considering dea features and placement zone" do
+          it 'picks the dea with expected feature and less instance count' do
+            subject.process_advertise_message(dea_with_ssd_but_no_security_1_instance)
+            subject.process_advertise_message(dea_with_ssd_but_no_security_2_instance)
+            dea_feature_options = {
+                'org_1' => {
+                    'space_1' => {
+                        'ssd' => true,
+                        'security' => false
+                    }
+                },
+            }
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
+                             app_space: 'space_1').should == "dea-id-11"
           end
         end
       end
