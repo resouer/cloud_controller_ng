@@ -220,28 +220,28 @@ module VCAP::CloudController
       describe "only_in_featured_dea" do
         context "when only considering dea features" do
           dea_feature_options = {
-              'org_1' => {
-                  'space_1' => {
-                      'ssd' => true,
-                      'security' => true
+              :org_1 => {
+                  :space_1 => {
+                      :ssd => true,
+                      :security => true
                   },
-                  'space_2' => {
-                      'ssd' => true,
-                      'security' => false
+                  :space_2 => {
+                      :ssd => true,
+                      :security => false
                   },
-                  'space_3' => {
-                      'security' => false
+                  :space_3 => {
+                      :security => false
                   }
 
               },
-              'org_2' => {
-                  'space_1' => {
-                      'ssd' => true,
-                      'security' => true
+              :org_2 => {
+                  :space_1 => {
+                      :ssd => true,
+                      :security => true
                   },
-                  'space_2' => {
-                      'ssd' => false,
-                      'security' => false
+                  :space_2 => {
+                      :ssd => false,
+                      :security => false
                   }
               }
           }
@@ -256,6 +256,15 @@ module VCAP::CloudController
             subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_2',
                              app_space: 'space_1').should == "dea-id-9"
           end
+
+          it 'it should not complain when app space & org is not provided' do
+            subject.process_advertise_message(dea_with_ssd_and_security)
+            subject.process_advertise_message(dea_with_ssd_but_no_security)
+
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options)
+            .should be_in("dea-id-9", "dea-id-10")
+          end
+
           it 'still picks the right dea when app requires no dea features' do
             subject.process_advertise_message(dea_with_ssd_and_security)
             subject.process_advertise_message(dea_with_ssd_but_no_security)
@@ -283,17 +292,27 @@ module VCAP::CloudController
         end
 
         context "considering dea features and placement zone" do
+          dea_feature_options = {
+              :org_1 => {
+                  :space_1 => {
+                      :ssd => true,
+                      :security => false
+                  }
+              },
+          }
           it 'picks the dea with expected feature and less instance count' do
             subject.process_advertise_message(dea_with_ssd_but_no_security_1_instance)
             subject.process_advertise_message(dea_with_ssd_but_no_security_2_instance)
-            dea_feature_options = {
-                'org_1' => {
-                    'space_1' => {
-                        'ssd' => true,
-                        'security' => false
-                    }
-                },
-            }
+
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
+                             app_space: 'space_1').should == "dea-id-11"
+          end
+
+          it 'should also work when no dea_features is provided by DEA' do
+            # no dea_features in this dea
+            subject.process_advertise_message(dea_in_default_zone_with_1_instance_and_512m_memory)
+            subject.process_advertise_message(dea_with_ssd_but_no_security_1_instance)
+
             subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
                              app_space: 'space_1').should == "dea-id-11"
           end

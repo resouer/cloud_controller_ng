@@ -44,24 +44,31 @@ class EligibleDeaAdvertisementFilter
   end
 
   def only_in_featured_dea(dea_feature_options, app_org, app_space)
-    if !dea_feature_options.blank? && dea_feature_options.has_key?(app_org) && dea_feature_options[app_org].has_key?(app_space)
-       @filtered_advertisements.select! {|ad| is_featured_dea?(ad.dea_features, dea_feature_options[app_org][app_space])}
+    if !dea_feature_options.blank? && app_org.is_a?(String)  && app_space.is_a?(String)
+      # CC will convert all keys to Symbol after loaded yaml
+      app_org = app_org.to_sym
+      app_space = app_space.to_sym
+      if dea_feature_options.has_key?(app_org) && dea_feature_options[app_org].has_key?(app_space)
+         @filtered_advertisements.select! {|ad| is_featured_dea?(ad.dea_features, dea_feature_options[app_org][app_space])}
+      end
     end
     self
   end
 
   private
 
-  # NOTE: You can only filter dea by features you specified in dea's yaml, aka, if you do not give value to 'foo' feature, cc will
-  # never know that dea is 'foo' or not, even you provided 'foo' condition on cc's side.
   def is_featured_dea?(real_world_from_dea, expected_from_cc)
     matched = true
-    expected_from_cc.each { |key, value|
-      if real_world_from_dea[key] != value
-        matched = false
-        break
-      end
-    }
+
+    if real_world_from_dea.blank?
+      # if DEA has no 'dea_features' but CC provide 'dea_feature_options', this peer considered not match
+      matched = false
+    else
+      expected_from_cc.each { |key, value|
+        # convert Symbol to String here as dea_features from DEA use String keys
+        if real_world_from_dea[key.to_s] != value then matched = false; break end
+      }
+    end
     matched
   end
 
