@@ -61,12 +61,15 @@ class EligibleDeaAdvertisementFilter
     matched = true
 
     if real_world_from_dea.blank?
-      # if DEA has no 'dea_features' but CC provide 'dea_feature_options', this peer considered not match
+      # 1. if DEA has no 'dea_features' but CC provide 'dea_feature_options', this case considered not match
       matched = false
     else
       expected_from_cc.each { |key, value|
-        # convert Symbol to String here as dea_features from DEA use String keys
-        if real_world_from_dea[key.to_s] != value then matched = false; break end
+        # 2. if CC provide a unknown feature key, this case considered not match
+        # should convert Symbol to String here as dea_features from DEA use String keys
+        if !real_world_from_dea.has_key?(key.to_s) || real_world_from_dea[key.to_s] != value
+          matched = false; break
+        end
       }
     end
     matched

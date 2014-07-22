@@ -128,6 +128,11 @@ module VCAP::CloudController
                           :dea_features => {"ssd" => true, "security" => false, "ha" => false}, :zone => "zone-1"
       end
 
+      let(:dea_only_has_ha) do
+        dea_advertisement :dea => "dea-id-14", :memory => 1024, :instance_count => 2,
+                          :dea_features => {"ha" => true}, :zone => "zone-1"
+      end
+
       let(:available_disk) { 100 }
 
       describe "dea availability" do
@@ -274,8 +279,7 @@ module VCAP::CloudController
           it 'still works even when dea_feature_options is not provided ' do
             subject.process_advertise_message(dea_with_ssd_and_security)
             subject.process_advertise_message(dea_with_ssd_but_no_security)
-            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", app_org: 'org_no',
-                             app_space: 'space_no').should be_in("dea-id-9", "dea-id-10")
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id").should be_in("dea-id-9", "dea-id-10")
           end
           it 'picks no dea when dea features are not meet ' do
             subject.process_advertise_message(dea_with_ssd_and_security)
@@ -287,7 +291,12 @@ module VCAP::CloudController
             subject.process_advertise_message(dea_with_ssd_no_security_and_no_ha)
             subject.process_advertise_message(dea_with_ssd_and_security)
             subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
-                             app_space: 'space_3').should == "dea-id-13"
+                             app_space: 'space_2').should == "dea-id-13"
+          end
+          it 'do not picks this dea if cc provide a unknown feature key' do
+            subject.process_advertise_message(dea_only_has_ha)
+            subject.find_dea(mem: 256, stack: "stack", app_id: "app-id", dea_feature_options: dea_feature_options, app_org: 'org_1',
+                             app_space: 'space_2').should == nil
           end
         end
 
